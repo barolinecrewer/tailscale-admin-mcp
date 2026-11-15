@@ -203,7 +203,7 @@ type callIn struct {
 }
 
 func (a *app) server() *mcp.Server {
-	s := mcp.NewServer(&mcp.Implementation{Name: "tailscale-admin-mcp", Version: "0.1.0"},
+	s := mcp.NewServer(&mcp.Implementation{Name: "tailscale-admin-mcp", Version: "0.1.2"},
 		&mcp.ServerOptions{Instructions: "Tailscale tailnet + Aperture admin. Read with get_*, write with set_* using the ETag you read."})
 
 	tool(s, "get_policy", "Live tailnet policy file (HuJSON, comments preserved) plus its ETag. Pass the ETag to set_policy. Needs OAuth scope policy_file:read.",
