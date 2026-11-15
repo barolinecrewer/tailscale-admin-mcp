@@ -386,6 +386,12 @@ func serveTsnet(a *app) error {
 	if len(logins) == 0 && len(tags) == 0 {
 		return fmt.Errorf("-tsnet requires ALLOWED_LOGINS and/or ALLOWED_TAGS (refusing to serve admin tools to the whole tailnet)")
 	}
+	// An OAuth secret without a query string registers an ephemeral, unapproved node
+	// (tailscale's oauthkey defaults). This is a long-lived service, so default the other way.
+	if s := os.Getenv("TS_CLIENT_SECRET"); s != "" && !strings.Contains(s, "?") {
+		q := "ephemeral=" + env("TSNET_EPHEMERAL", "false") + "&preauthorized=" + env("TSNET_PREAUTHORIZED", "true")
+		os.Setenv("TS_CLIENT_SECRET", s+"?"+q)
+	}
 	srv := &tsnet.Server{Hostname: env("TSNET_HOSTNAME", "tailscale-admin-mcp"), Dir: os.Getenv("TSNET_DIR")}
 	for t := range split(os.Getenv("TSNET_TAGS")) {
 		srv.AdvertiseTags = append(srv.AdvertiseTags, t)

@@ -19,6 +19,7 @@ Aperture calls go out through that node, so grant the node's tag admin on Apertu
 | `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_CLIENT_SECRET` | Tailscale API client (scopes below) |
 | `TS_AUTHKEY` or `TS_CLIENT_SECRET` | register the tsnet node (see "Two OAuth clients") |
 | `TSNET_HOSTNAME`, `TSNET_TAGS`, `TSNET_DIR` | node name (`tailscale-admin-mcp`), advertised tags, state dir (`/state`, mount a volume) |
+| `TSNET_EPHEMERAL`, `TSNET_PREAUTHORIZED` | with `TS_CLIENT_SECRET` only, when it has no `?query`: default `false` / `true` (tailscale's own defaults are the reverse, which would reap the node and leave it awaiting approval). Put your own `?ephemeral=…&preauthorized=…` on the secret to bypass |
 | `ALLOWED_LOGINS`, `ALLOWED_TAGS` | who may call the MCP |
 | `TS_TAILNET`, `APERTURE_URL` | defaults `-`, `http://ai/aperture` |
 
