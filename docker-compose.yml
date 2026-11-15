@@ -1,6 +1,6 @@
 services:
   tailscale-admin-mcp:
-    image: ghcr.io/barolinecrewer/tailscale-admin-mcp:v0.1.0
+    image: ghcr.io/barolinecrewer/tailscale-admin-mcp:v0.1.1
     build: .
     restart: unless-stopped
     environment:
