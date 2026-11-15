@@ -181,6 +181,9 @@ type setConfigIn struct {
 	Config string `json:"config"`
 	Etag   string `json:"etag" jsonschema:"ETag from aperture_get_config"`
 }
+type pricingIn struct {
+	Model string `json:"model,omitempty" jsonschema:"exact model string, e.g. anthropic/claude-opus-4-7; empty for the whole catalog"`
+}
 type diffIn struct {
 	Which string `json:"which" jsonschema:"tailscale or aperture"`
 	Local string `json:"local" jsonschema:"rendered local copy to compare against, e.g. output of op inject -i policy.hujson.j2"`
@@ -250,7 +253,7 @@ func (a *app) server() *mcp.Server {
 			return sb.String(), nil
 		})
 
-	tool(s, "aperture_get_config", "Live Aperture config plus ETag. Pass the ETag to aperture_set_config.",
+	tool(s, "aperture_get_config", "Live Aperture config plus ETag (admin role). Provider API keys are redacted, so do not edit this output and send it back with aperture_set_config; start from the rendered infra template instead.",
 		func(ctx context.Context, _ none) (string, error) {
 			r, err := a.apertureGet(ctx)
 			return r.String(), err
@@ -261,14 +264,24 @@ func (a *app) server() *mcp.Server {
 			r, err := do(ctx, a.aph, "POST", a.aperture+"/config:validate", string(b), "application/json", nil)
 			return r.String(), err
 		})
-	tool(s, "aperture_set_config", "Replace the live Aperture config. etag must be from aperture_get_config.",
+	tool(s, "aperture_set_config", "Replace the entire live Aperture config (admin role). etag must be from aperture_get_config. Returns 412 if the config changed since, 422 if invalid. The body must contain real provider API keys, since aperture_get_config redacts them.",
 		func(ctx context.Context, in setConfigIn) (string, error) {
 			b, _ := json.Marshal(map[string]string{"config": in.Config})
 			r, err := do(ctx, a.aph, "PUT", a.aperture+"/config", string(b), "application/json", map[string]string{"If-Match": strings.Trim(in.Etag, `"`)})
 			return r.String(), err
 		})
 
-	tool(s, "diff_live", "Unified diff of a local copy vs the live config (which=tailscale|aperture). Use to find drift from the infra repo.",
+	tool(s, "aperture_get_pricing", "Aperture pricing catalog, or one model's pricing if model is set. Needs an explicit read_pricing grant (admin alone is not enough).",
+		func(ctx context.Context, in pricingIn) (string, error) {
+			u := a.aperture + "/pricing"
+			if in.Model != "" {
+				u += "/" + in.Model
+			}
+			r, err := do(ctx, a.aph, "GET", u, "", "", nil)
+			return r.String(), err
+		})
+
+	tool(s, "diff_live", "Unified diff of a local copy vs the live config (which=tailscale|aperture). Use to find drift from the infra repo. Aperture provider API keys are redacted live, so expect apikey lines to differ.",
 		func(ctx context.Context, in diffIn) (string, error) {
 			var live string
 			if in.Which == "tailscale" {
