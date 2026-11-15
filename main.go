@@ -206,17 +206,17 @@ func (a *app) server() *mcp.Server {
 	s := mcp.NewServer(&mcp.Implementation{Name: "tailscale-admin-mcp", Version: "0.1.0"},
 		&mcp.ServerOptions{Instructions: "Tailscale tailnet + Aperture admin. Read with get_*, write with set_* using the ETag you read."})
 
-	tool(s, "get_policy", "Live tailnet policy file (HuJSON, comments preserved) plus its ETag. Pass the ETag to set_policy.",
+	tool(s, "get_policy", "Live tailnet policy file (HuJSON, comments preserved) plus its ETag. Pass the ETag to set_policy. Needs OAuth scope policy_file:read.",
 		func(ctx context.Context, _ none) (string, error) { r, err := a.livePolicy(ctx); return r.String(), err })
-	tool(s, "validate_policy", "Validate a HuJSON policy (including its tests) without applying it.",
+	tool(s, "validate_policy", "Validate a HuJSON policy (including its tests) without applying it. Needs policy_file:read.",
 		func(ctx context.Context, in policyIn) (string, error) {
 			return a.acl(ctx, "/validate", in.Policy, nil, nil)
 		})
-	tool(s, "set_policy", "Replace the live tailnet policy. etag must be the one from get_policy.",
+	tool(s, "set_policy", "Replace the live tailnet policy. etag must be the one from get_policy. Needs the write scope policy_file.",
 		func(ctx context.Context, in setPolicyIn) (string, error) {
 			return a.acl(ctx, "", in.Policy, nil, map[string]string{"If-Match": in.Etag})
 		})
-	tool(s, "preview_policy", "Rules a hypothetical policy applies to a user (kind=user, target=email) or ip:port (kind=ipport).",
+	tool(s, "preview_policy", "Rules a hypothetical policy applies to a user (kind=user, target=email) or ip:port (kind=ipport). Needs policy_file:read.",
 		func(ctx context.Context, in previewIn) (string, error) {
 			return a.acl(ctx, "/preview", in.Policy, url.Values{"type": {in.Kind}, "previewFor": {in.Target}}, nil)
 		})
@@ -359,7 +359,7 @@ func (a *app) server() *mcp.Server {
 			b, err := yaml.Marshal(op)
 			return string(b), err
 		})
-	tool(s, "call_api", "Call any Tailscale API endpoint. {tailnet} is filled in. body is a JSON string. Check describe_api first for writes.",
+	tool(s, "call_api", "Call any Tailscale API endpoint. {tailnet} is filled in. body is a JSON string. Each operation lists its OAuth scope (describe_api); the server's OAuth client must have it. Check describe_api first for writes.",
 		func(ctx context.Context, in callIn) (string, error) {
 			q := url.Values{}
 			for k, v := range in.Query {

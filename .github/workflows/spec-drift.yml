@@ -1,0 +1,34 @@
+name: Spec drift
+on:
+  schedule:
+    - cron: "0 14 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS https://api.tailscale.com/api/v2 | yq -o=json > spec.json
+          python3 - <<'PY'
+          import json, sys
+          paths = json.load(open("spec.json"))["paths"]
+          # (path, method, scope text the operation must still mention)
+          expect = [
+              ("/tailnet/{tailnet}/acl", "get", "policy_file:read"),
+              ("/tailnet/{tailnet}/acl", "post", "`policy_file`"),
+              ("/tailnet/{tailnet}/acl/validate", "post", "policy_file:read"),
+              ("/tailnet/{tailnet}/acl/preview", "post", "policy_file:read"),
+              ("/tailnet/{tailnet}/devices", "get", "devices:core:read"),
+          ]
+          bad = []
+          for p, m, scope in expect:
+              item = paths.get(p, {})
+              if m not in item:
+                  bad.append(f"missing {m.upper()} {p}")
+              elif scope not in json.dumps(item[m]) + json.dumps(item.get("parameters", [])):
+                  bad.append(f"{m.upper()} {p}: scope {scope} no longer documented")
+          print("\n".join(bad) or "spec matches")
+          sys.exit(1 if bad else 0)
+          PY

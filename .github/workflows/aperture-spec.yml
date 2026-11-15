@@ -1,0 +1,44 @@
+# Optional. Fetches the Aperture OpenAPI spec from your own Aperture instance over the tailnet,
+# using an ephemeral tagged runner node, and checks the endpoints this server relies on.
+#
+# Enable by setting, in repo Settings > Secrets and variables > Actions:
+#   variable APERTURE_URL            e.g. http://ai/aperture
+#   secrets  TS_OAUTH_CLIENT_ID, TS_OAUTH_CLIENT_SECRET   OAuth client with `auth_keys` scope and tag:ci
+# and in your tailnet policy: tag:ci in tagOwners, plus a grant tag:ci -> your Aperture host on tcp:80.
+# Does nothing if APERTURE_URL is unset (e.g. in forks).
+name: Aperture spec
+on:
+  schedule:
+    - cron: "0 14 * * 2"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fetch:
+    if: vars.APERTURE_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+      - name: Fetch spec
+        run: curl -fsS --retry 5 --retry-delay 3 "${{ vars.APERTURE_URL }}/openapi.json" -o aperture-openapi.json
+      - name: Check endpoints
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          paths = json.load(open("aperture-openapi.json"))["paths"]
+          expect = [("/config", "get"), ("/config", "put"), ("/config:validate", "post"),
+                    ("/pricing", "get"), ("/pricing/{model}", "get")]
+          bad = [f"missing {m.upper()} {p}" for p, m in expect if m not in paths.get(p, {})]
+          print("\n".join(bad) or "spec matches")
+          sys.exit(1 if bad else 0)
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: aperture-openapi
+          path: aperture-openapi.json
+          if-no-files-found: ignore
