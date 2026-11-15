@@ -1,0 +1,19 @@
+services:
+  tailscale-admin-mcp:
+    image: ghcr.io/barolinecrewer/tailscale-admin-mcp:v0.1.0
+    build: .
+    restart: unless-stopped
+    environment:
+      TS_OAUTH_CLIENT_ID: ${TS_OAUTH_CLIENT_ID:?}
+      TS_OAUTH_CLIENT_SECRET: ${TS_OAUTH_CLIENT_SECRET:?}
+      TS_CLIENT_SECRET: ${TS_CLIENT_SECRET:?}
+      TSNET_HOSTNAME: ${TSNET_HOSTNAME:-tailscale-admin-mcp}
+      TSNET_TAGS: ${TSNET_TAGS:-tag:tailscale-admin-mcp}
+      ALLOWED_LOGINS: ${ALLOWED_LOGINS:-}
+      ALLOWED_TAGS: ${ALLOWED_TAGS:-}
+      APERTURE_URL: ${APERTURE_URL:-http://ai/aperture}
+    volumes:
+      - state:/state
+
+volumes:
+  state:

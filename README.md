@@ -54,3 +54,7 @@ No credential. Aperture authorizes by tailnet identity, so the node's tag needs 
 
 `.github/workflows/aperture-spec.yml` joins the tailnet as an ephemeral `tag:ci` runner, downloads `<APERTURE_URL>/openapi.json`, checks the endpoints this server uses, and uploads the spec as an artifact. It does nothing unless the repo variable `APERTURE_URL` is set.
 Also set secrets `TS_OAUTH_CLIENT_ID`/`TS_OAUTH_CLIENT_SECRET` (an OAuth client with `auth_keys` and `tag:ci`), add `tag:ci` to `tagOwners`, and grant `tag:ci` access to your Aperture host on `tcp:80`.
+
+## Compose
+
+`cp .env.example .env`, fill it in, then `docker compose up -d`. The node appears as `tailscale-admin-mcp` on your tailnet and serves `https://tailscale-admin-mcp.<tailnet>.ts.net/mcp`.
